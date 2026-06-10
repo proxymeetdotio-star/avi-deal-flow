@@ -126,7 +126,7 @@ function AssessmentPage() {
         inputs: inputsForReport(),
         funding_readiness_score: result.funding_readiness_score,
         investor_attractiveness_score: result.investor_attractiveness_score,
-        report: result as unknown as Record<string, unknown>,
+        report: result as unknown as never,
       });
       if (error) console.error("lead insert", error);
 
