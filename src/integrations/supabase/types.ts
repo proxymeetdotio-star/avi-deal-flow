@@ -14,16 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      leads: {
+        Row: {
+          assessment_type: Database["public"]["Enums"]["assessment_type"]
+          capital_sought: string
+          company_name: string
+          created_at: string
+          deal_type: Database["public"]["Enums"]["deal_type"]
+          email: string
+          full_name: string
+          funding_readiness_score: number | null
+          id: string
+          inputs: Json
+          investor_attractiveness_score: number | null
+          notes: string | null
+          phone: string
+          report: Json | null
+          status: Database["public"]["Enums"]["lead_status"]
+          updated_at: string
+        }
+        Insert: {
+          assessment_type: Database["public"]["Enums"]["assessment_type"]
+          capital_sought: string
+          company_name: string
+          created_at?: string
+          deal_type: Database["public"]["Enums"]["deal_type"]
+          email: string
+          full_name: string
+          funding_readiness_score?: number | null
+          id?: string
+          inputs?: Json
+          investor_attractiveness_score?: number | null
+          notes?: string | null
+          phone: string
+          report?: Json | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Update: {
+          assessment_type?: Database["public"]["Enums"]["assessment_type"]
+          capital_sought?: string
+          company_name?: string
+          created_at?: string
+          deal_type?: Database["public"]["Enums"]["deal_type"]
+          email?: string
+          full_name?: string
+          funding_readiness_score?: number | null
+          id?: string
+          inputs?: Json
+          investor_attractiveness_score?: number | null
+          notes?: string | null
+          phone?: string
+          report?: Json | null
+          status?: Database["public"]["Enums"]["lead_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin"
+      assessment_type:
+        | "real_estate_capital_readiness"
+        | "sme_funding_readiness"
+        | "investor_suitability"
+        | "sharia_compliance"
+      deal_type: "Equity" | "Debt"
+      lead_status:
+        | "New"
+        | "Contacted"
+        | "Converted to Mandate"
+        | "Not Qualified"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +244,21 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin"],
+      assessment_type: [
+        "real_estate_capital_readiness",
+        "sme_funding_readiness",
+        "investor_suitability",
+        "sharia_compliance",
+      ],
+      deal_type: ["Equity", "Debt"],
+      lead_status: [
+        "New",
+        "Contacted",
+        "Converted to Mandate",
+        "Not Qualified",
+      ],
+    },
   },
 } as const
