@@ -71,6 +71,180 @@ export type Database = {
         }
         Relationships: []
       }
+      mandate_documents: {
+        Row: {
+          analysis: Json | null
+          analyzed_at: string | null
+          created_at: string
+          doc_type: Database["public"]["Enums"]["mandate_doc_type"]
+          file_name: string
+          file_size: number
+          id: string
+          mandate_id: string
+          mime_type: string | null
+          storage_path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          analysis?: Json | null
+          analyzed_at?: string | null
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["mandate_doc_type"]
+          file_name: string
+          file_size: number
+          id?: string
+          mandate_id: string
+          mime_type?: string | null
+          storage_path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          analysis?: Json | null
+          analyzed_at?: string | null
+          created_at?: string
+          doc_type?: Database["public"]["Enums"]["mandate_doc_type"]
+          file_name?: string
+          file_size?: number
+          id?: string
+          mandate_id?: string
+          mime_type?: string | null
+          storage_path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_documents_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandate_generated_documents: {
+        Row: {
+          content: Json | null
+          created_at: string
+          doc_kind: Database["public"]["Enums"]["generated_doc_kind"]
+          error: string | null
+          format: Database["public"]["Enums"]["generated_doc_format"]
+          generated_at: string | null
+          id: string
+          mandate_id: string
+          status: string
+          storage_path: string | null
+        }
+        Insert: {
+          content?: Json | null
+          created_at?: string
+          doc_kind: Database["public"]["Enums"]["generated_doc_kind"]
+          error?: string | null
+          format: Database["public"]["Enums"]["generated_doc_format"]
+          generated_at?: string | null
+          id?: string
+          mandate_id: string
+          status?: string
+          storage_path?: string | null
+        }
+        Update: {
+          content?: Json | null
+          created_at?: string
+          doc_kind?: Database["public"]["Enums"]["generated_doc_kind"]
+          error?: string | null
+          format?: Database["public"]["Enums"]["generated_doc_format"]
+          generated_at?: string | null
+          id?: string
+          mandate_id?: string
+          status?: string
+          storage_path?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandate_generated_documents_mandate_id_fkey"
+            columns: ["mandate_id"]
+            isOneToOne: false
+            referencedRelation: "mandates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mandates: {
+        Row: {
+          archived_at: string | null
+          asset_class: string | null
+          capital_sought: string
+          company_name: string
+          created_at: string
+          created_by: string | null
+          deal_type: Database["public"]["Enums"]["deal_type"]
+          email: string
+          financial_summary: string | null
+          geography: string | null
+          id: string
+          lead_id: string | null
+          notes: string | null
+          phone: string
+          sharia_status: Database["public"]["Enums"]["sharia_status"]
+          sponsor_name: string
+          sponsor_track_record: string | null
+          stage: Database["public"]["Enums"]["mandate_stage"]
+          updated_at: string
+          use_of_proceeds: string | null
+        }
+        Insert: {
+          archived_at?: string | null
+          asset_class?: string | null
+          capital_sought: string
+          company_name: string
+          created_at?: string
+          created_by?: string | null
+          deal_type: Database["public"]["Enums"]["deal_type"]
+          email: string
+          financial_summary?: string | null
+          geography?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          phone: string
+          sharia_status?: Database["public"]["Enums"]["sharia_status"]
+          sponsor_name: string
+          sponsor_track_record?: string | null
+          stage?: Database["public"]["Enums"]["mandate_stage"]
+          updated_at?: string
+          use_of_proceeds?: string | null
+        }
+        Update: {
+          archived_at?: string | null
+          asset_class?: string | null
+          capital_sought?: string
+          company_name?: string
+          created_at?: string
+          created_by?: string | null
+          deal_type?: Database["public"]["Enums"]["deal_type"]
+          email?: string
+          financial_summary?: string | null
+          geography?: string | null
+          id?: string
+          lead_id?: string | null
+          notes?: string | null
+          phone?: string
+          sharia_status?: Database["public"]["Enums"]["sharia_status"]
+          sponsor_name?: string
+          sponsor_track_record?: string | null
+          stage?: Database["public"]["Enums"]["mandate_stage"]
+          updated_at?: string
+          use_of_proceeds?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mandates_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -113,11 +287,39 @@ export type Database = {
         | "investor_suitability"
         | "sharia_compliance"
       deal_type: "Equity" | "Debt"
+      generated_doc_format: "pdf" | "docx" | "pptx"
+      generated_doc_kind:
+        | "Teaser"
+        | "Information Memorandum"
+        | "Investor Deck"
+        | "Financial Model Summary"
+        | "Term Sheet"
+        | "Risk Memo"
+        | "Process Letter"
+        | "Debt Structure Memo"
+        | "Covenant Pack"
+        | "Sharia Compliance Memo"
       lead_status:
         | "New"
         | "Contacted"
         | "Converted to Mandate"
         | "Not Qualified"
+      mandate_doc_type:
+        | "Pitch Deck"
+        | "Financials"
+        | "Trade License"
+        | "Title Deed"
+        | "Valuation"
+        | "KYC"
+        | "Other"
+      mandate_stage:
+        | "Draft"
+        | "Under Review"
+        | "Ready to Package"
+        | "Live"
+        | "Closed"
+        | "Archived"
+      sharia_status: "Required" | "Not Required" | "Pending"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -253,12 +455,43 @@ export const Constants = {
         "sharia_compliance",
       ],
       deal_type: ["Equity", "Debt"],
+      generated_doc_format: ["pdf", "docx", "pptx"],
+      generated_doc_kind: [
+        "Teaser",
+        "Information Memorandum",
+        "Investor Deck",
+        "Financial Model Summary",
+        "Term Sheet",
+        "Risk Memo",
+        "Process Letter",
+        "Debt Structure Memo",
+        "Covenant Pack",
+        "Sharia Compliance Memo",
+      ],
       lead_status: [
         "New",
         "Contacted",
         "Converted to Mandate",
         "Not Qualified",
       ],
+      mandate_doc_type: [
+        "Pitch Deck",
+        "Financials",
+        "Trade License",
+        "Title Deed",
+        "Valuation",
+        "KYC",
+        "Other",
+      ],
+      mandate_stage: [
+        "Draft",
+        "Under Review",
+        "Ready to Package",
+        "Live",
+        "Closed",
+        "Archived",
+      ],
+      sharia_status: ["Required", "Not Required", "Pending"],
     },
   },
 } as const
