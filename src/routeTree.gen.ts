@@ -14,6 +14,8 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AssessmentSlugRouteImport } from './routes/assessment.$slug'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedMandatesIndexRouteImport } from './routes/_authenticated/mandates.index'
+import { Route as AuthenticatedMandatesIdRouteImport } from './routes/_authenticated/mandates.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -39,18 +41,33 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedMandatesIndexRoute =
+  AuthenticatedMandatesIndexRouteImport.update({
+    id: '/mandates/',
+    path: '/mandates/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedMandatesIdRoute = AuthenticatedMandatesIdRouteImport.update({
+  id: '/mandates/$id',
+  path: '/mandates/$id',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/assessment/$slug': typeof AssessmentSlugRoute
+  '/mandates/$id': typeof AuthenticatedMandatesIdRoute
+  '/mandates/': typeof AuthenticatedMandatesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/assessment/$slug': typeof AssessmentSlugRoute
+  '/mandates/$id': typeof AuthenticatedMandatesIdRoute
+  '/mandates': typeof AuthenticatedMandatesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -59,12 +76,26 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/assessment/$slug': typeof AssessmentSlugRoute
+  '/_authenticated/mandates/$id': typeof AuthenticatedMandatesIdRoute
+  '/_authenticated/mandates/': typeof AuthenticatedMandatesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/admin' | '/assessment/$slug'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/assessment/$slug'
+    | '/mandates/$id'
+    | '/mandates/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/admin' | '/assessment/$slug'
+  to:
+    | '/'
+    | '/auth'
+    | '/admin'
+    | '/assessment/$slug'
+    | '/mandates/$id'
+    | '/mandates'
   id:
     | '__root__'
     | '/'
@@ -72,6 +103,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/admin'
     | '/assessment/$slug'
+    | '/_authenticated/mandates/$id'
+    | '/_authenticated/mandates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -118,15 +151,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/mandates/': {
+      id: '/_authenticated/mandates/'
+      path: '/mandates'
+      fullPath: '/mandates/'
+      preLoaderRoute: typeof AuthenticatedMandatesIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/mandates/$id': {
+      id: '/_authenticated/mandates/$id'
+      path: '/mandates/$id'
+      fullPath: '/mandates/$id'
+      preLoaderRoute: typeof AuthenticatedMandatesIdRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
   }
 }
 
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
+  AuthenticatedMandatesIdRoute: typeof AuthenticatedMandatesIdRoute
+  AuthenticatedMandatesIndexRoute: typeof AuthenticatedMandatesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
+  AuthenticatedMandatesIdRoute: AuthenticatedMandatesIdRoute,
+  AuthenticatedMandatesIndexRoute: AuthenticatedMandatesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -141,13 +192,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
