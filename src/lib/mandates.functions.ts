@@ -37,7 +37,7 @@ export const convertLeadToMandate = createServerFn({ method: "POST" })
       geography: null,
       use_of_proceeds: null,
       sponsor_track_record: null,
-      financial_summary: lead.report?.executive_summary ?? null,
+      financial_summary: (lead.report as any)?.executive_summary ?? null,
       sharia_status: "Pending" as const,
       stage: "Draft" as const,
       notes: lead.notes,
@@ -78,7 +78,7 @@ export const updateMandate = createServerFn({ method: "POST" })
     await assertAdmin(context);
     const patch: Record<string, unknown> = { ...data.patch };
     if (patch.stage === "Archived") patch.archived_at = new Date().toISOString();
-    const { error } = await context.supabase.from("mandates").update(patch).eq("id", data.id);
+    const { error } = await context.supabase.from("mandates").update(patch as any).eq("id", data.id);
     if (error) throw new Error(error.message);
     return { ok: true };
   });

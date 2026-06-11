@@ -98,9 +98,9 @@ export const analyzeMandateDocument = createServerFn({ method: "POST" })
 
     const { error: upErr } = await context.supabase
       .from("mandate_documents")
-      .update({ analysis, analyzed_at: new Date().toISOString() })
+      .update({ analysis: analysis as any, analyzed_at: new Date().toISOString() })
       .eq("id", doc.id);
     if (upErr) throw new Error(upErr.message);
 
-    return { ok: true, analysis };
+    return { ok: true, analysis: analysis as any };
   });
