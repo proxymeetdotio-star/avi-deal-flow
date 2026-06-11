@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { ASSESSMENTS, assessmentByKey } from "@/lib/assessments";
+import { convertLeadToMandate } from "@/lib/mandates.functions";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -110,6 +112,7 @@ function AdminPage() {
           <h1 className="mt-2 text-3xl font-bold tracking-tight">Lead Dashboard</h1>
         </div>
         <div className="flex gap-2">
+          <Link to="/mandates" className="avi-btn-ghost">Mandates</Link>
           <Link to="/" className="avi-btn-ghost">View Site</Link>
           <button onClick={signOut} className="avi-btn-ghost">Sign Out</button>
         </div>
@@ -218,9 +221,19 @@ function Drawer({ lead, onClose, onSave }: {
   onClose: () => void;
   onSave: (patch: { status?: LeadStatus; notes?: string }) => void;
 }) {
+  const navigate = useNavigate();
   const [status, setStatus] = useState<LeadStatus>(lead.status);
   const [notes, setNotes] = useState(lead.notes ?? "");
   const meta = assessmentByKey(lead.assessment_type);
+  const convertFn = useServerFn(convertLeadToMandate);
+  const convert = useMutation({
+    mutationFn: () => convertFn({ data: { leadId: lead.id } }),
+    onSuccess: (res) => {
+      toast.success(res.reused ? "Mandate already exists — opening it." : "Mandate created.");
+      navigate({ to: "/mandates/$id", params: { id: res.mandateId } });
+    },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Conversion failed"),
+  });
 
   return (
     <div className="fixed inset-0 z-40 flex" onClick={onClose}>
@@ -261,14 +274,12 @@ function Drawer({ lead, onClose, onSave }: {
           <div className="flex flex-col gap-2 pt-2">
             <button onClick={() => onSave({ status, notes })} className="avi-btn-primary">Save Changes</button>
             <button
-              onClick={() => { onSave({ status: "Converted to Mandate", notes }); }}
+              onClick={() => convert.mutate()}
+              disabled={convert.isPending}
               className="avi-btn-ghost"
             >
-              Convert to Mandate
+              {convert.isPending ? "Converting…" : "Convert to Mandate →"}
             </button>
-            <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-              Mandate creation (Module 2) will open here in the next phase, pre-filled with this lead's data.
-            </p>
           </div>
         </div>
       </aside>
