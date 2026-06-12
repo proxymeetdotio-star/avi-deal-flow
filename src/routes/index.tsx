@@ -4,8 +4,8 @@ import { ASSESSMENTS } from "@/lib/assessments";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Avi — AI-Native Investment Banking for GCC Private Capital" },
-      { name: "description", content: "Run a free AI-powered capital readiness assessment. Real estate, SME, growth and private credit across the GCC." },
+      { title: "Avi — GCC Private Capital Markets" },
+      { name: "description", content: "Institutional capital, packaged at speed for SMEs. Real estate, SME, growth and private credit across the GCC." },
     ],
   }),
   component: Index,
@@ -16,17 +16,17 @@ function Index() {
     <>
       <section className="mx-auto max-w-6xl px-6 pt-20 pb-12">
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[color:var(--color-muted-foreground)]">
-          AI-Native Investment Banking — GCC
+          GCC PRIVATE CAPITAL MARKETS
         </p>
         <h1 className="mt-4 text-4xl sm:text-5xl md:text-6xl font-bold leading-[1.05] tracking-tight max-w-4xl">
-          Institutional capital, packaged at the speed of software.
+          Institutional capital, packaged at speed for SMEs.
         </h1>
         <p className="mt-6 max-w-2xl text-base sm:text-lg text-[color:var(--color-muted-foreground)] leading-relaxed">
-          Avi is an AI-native investment bank for GCC private capital markets — real estate, SME, growth and private credit. Begin with a free, confidential capital readiness assessment.
+          Avi is an AI-native capital advisory platform for GCC private capital markets — real estate, SME, growth and private credit. Begin with a free, confidential capital readiness assessment.
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a href="#assessments" className="avi-btn-primary">Run an Assessment</a>
-          <Link to="/auth" className="avi-btn-ghost">Admin Sign In</Link>
+          <Link to="/auth" className="avi-btn-ghost"></Link>
         </div>
       </section>
 
