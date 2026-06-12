@@ -126,7 +126,7 @@ function Footer() {
       <div className="mx-auto max-w-6xl px-6 py-8 text-xs text-[color:var(--color-muted-foreground)]">
         <p className="font-bold uppercase tracking-[0.15em] text-[color:var(--color-foreground)]">Avi</p>
         <p className="mt-2 max-w-2xl leading-relaxed">
-          Prepared by Avi. Regulated by the DFSA via Index &amp; Cie. Content on this site is for informational purposes only and does not constitute financial advice or an offer to invest or lend.
+          Prepared by Avi.
         </p>
         <p className="mt-3">© {new Date().getFullYear()} Avi. All rights reserved.</p>
       </div>

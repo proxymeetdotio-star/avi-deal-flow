@@ -16,7 +16,7 @@ interface ReportPdfArgs {
 }
 
 const FOOTER =
-  "Prepared by Avi. Regulated by the DFSA via Index & Cie. This report is for informational purposes only and does not constitute financial advice.";
+  "Prepared by Avi.";
 
 export function generateAssessmentPdf(args: ReportPdfArgs): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4" });

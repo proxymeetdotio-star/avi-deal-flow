@@ -26,7 +26,6 @@ function Index() {
         </p>
         <div className="mt-8 flex flex-wrap gap-3">
           <a href="#assessments" className="avi-btn-primary">Run an Assessment</a>
-          <Link to="/auth" className="avi-btn-ghost"></Link>
         </div>
       </section>
 
