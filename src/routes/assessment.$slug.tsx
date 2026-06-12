@@ -378,7 +378,7 @@ function ReportStep({
         <button onClick={onDownload} className="avi-btn-primary">Download Branded PDF</button>
       </div>
       <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-        Prepared by Avi. Regulated by the DFSA via Index &amp; Cie. This report is for informational purposes only and does not constitute financial advice.
+        Prepared by Avi.
       </p>
     </div>
   );
