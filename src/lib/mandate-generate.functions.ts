@@ -104,7 +104,7 @@ ${docsContext || "(none analyzed yet)"}
 Return ONLY JSON matching this shape:
 ${shape}
 
-Where the "disclaimer" field must be the string: "Prepared by Avi. Regulated by the DFSA via Index & Cie. This document is for informational purposes only and does not constitute an offer to invest or lend."`;
+Where the "disclaimer" field must be the string: "Prepared by Avi."`;
 
   const resp = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
