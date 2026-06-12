@@ -30,14 +30,6 @@ export const ASSESSMENTS: AssessmentMeta[] = [
       "For operating businesses seeking growth equity, private credit or working capital.",
   },
   {
-    key: "investor_suitability",
-    slug: "investor-suitability",
-    title: "Investor Suitability",
-    short: "Identify the investor profile most suited to your transaction.",
-    description:
-      "Maps capital required, structure and geography to the right family office, fund or institutional profile.",
-  },
-  {
     key: "sharia_compliance",
     slug: "sharia-compliance",
     title: "Sharia Compliance",
