@@ -3,6 +3,7 @@
   "private": true,
   "sideEffects": false,
   "type": "module",
+    "homepage": "https://proxymeetdotio-star.github.io",
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
