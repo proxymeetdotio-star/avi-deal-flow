@@ -310,7 +310,7 @@ function LeadStep({
       <div>
         <h2 className="text-lg font-bold">Where shall we send your report?</h2>
         <p className="mt-1 text-sm text-[color:var(--color-muted-foreground)]">
-          All information remains confidential and is handled in line with DFSA-regulated practice.
+          All information remains confidential.
         </p>
       </div>
 
