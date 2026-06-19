@@ -50,7 +50,7 @@ function Index() {
         <div className="flex items-end justify-between gap-6 flex-wrap">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[color:var(--color-muted-foreground)]">Capital Readiness Tools</p>
-            <h2 className="mt-3 text-3xl font-bold tracking-tight">Four free assessments.</h2>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">Three free assessments.</h2>
           </div>
           <p className="max-w-md text-sm text-[color:var(--color-muted-foreground)]">
             Each assessment produces a branded, downloadable report — scored, structured and ready to share with capital partners.
