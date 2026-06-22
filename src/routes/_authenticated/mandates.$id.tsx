@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { updateMandate, archiveMandate } from "@/lib/mandates.functions";
 import { analyzeMandateDocument } from "@/lib/mandate-docs.functions";
 import { generateMandatePackage } from "@/lib/mandate-generate.functions";
+import { reviewMandateDocuments, generateDealMemo } from "@/lib/mandate-review.functions";
 import { renderMandatePdf } from "@/lib/render-mandate-pdf";
 import { renderMandateDocx } from "@/lib/render-mandate-docx";
 import { renderMandatePptx } from "@/lib/render-mandate-pptx";
@@ -23,7 +24,7 @@ const SHARIA = ["Required", "Not Required", "Pending"] as const;
 function MandateDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "documents" | "package">("overview");
+  const [tab, setTab] = useState<"overview" | "documents" | "review" | "package">("overview");
 
   const { data: mandate, isLoading } = useQuery({
     queryKey: ["mandate", id],
@@ -58,11 +59,11 @@ function MandateDetail() {
       </div>
 
       <div className="mt-6 flex gap-2 border-b" style={{ borderColor: "var(--color-border)" }}>
-        {(["overview", "documents", "package"] as const).map((t) => (
+        {(["overview", "documents", "review", "package"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 -mb-px"
             style={{ borderColor: tab === t ? "var(--color-foreground)" : "transparent", color: tab === t ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>
-            {t === "package" ? "Generated Package" : t === "documents" ? "Documents" : "Overview"}
+            {t === "package" ? "Generated Package" : t === "documents" ? "Documents" : t === "review" ? "Review & Memo" : "Overview"}
           </button>
         ))}
       </div>
@@ -70,6 +71,7 @@ function MandateDetail() {
       <div className="mt-6">
         {tab === "overview" && <Overview mandate={mandate} onSaved={() => qc.invalidateQueries({ queryKey: ["mandate", id] })} />}
         {tab === "documents" && <Documents mandateId={id} />}
+        {tab === "review" && <ReviewAndMemo mandate={mandate} onSaved={() => qc.invalidateQueries({ queryKey: ["mandate", id] })} />}
         {tab === "package" && <Package mandate={mandate} />}
       </div>
     </div>
@@ -84,6 +86,10 @@ function Overview({ mandate, onSaved }: { mandate: any; onSaved: () => void }) {
     mutationFn: () => updateFn({ data: { id: mandate.id, patch: {
       sponsor_name: m.sponsor_name, company_name: m.company_name, email: m.email, phone: m.phone,
       deal_type: m.deal_type, asset_class: m.asset_class, geography: m.geography, capital_sought: m.capital_sought,
+      funding_purpose: m.funding_purpose, use_of_funds_detail: m.use_of_funds_detail,
+      years_in_operation: m.years_in_operation == null || m.years_in_operation === "" ? null : Number(m.years_in_operation),
+      existing_debt: m.existing_debt == null || m.existing_debt === "" ? null : Number(m.existing_debt),
+      cashflow_strength: m.cashflow_strength,
       use_of_proceeds: m.use_of_proceeds, sponsor_track_record: m.sponsor_track_record,
       financial_summary: m.financial_summary, sharia_status: m.sharia_status, stage: m.stage, notes: m.notes,
     }}}),
@@ -105,11 +111,16 @@ function Overview({ mandate, onSaved }: { mandate: any; onSaved: () => void }) {
       <Field label="Phone" v={m.phone} onChange={(v) => f("phone", v)} />
       <Select label="Deal type" v={m.deal_type} options={["Equity", "Debt"]} onChange={(v) => f("deal_type", v)} />
       <Field label="Capital sought" v={m.capital_sought} onChange={(v) => f("capital_sought", v)} />
+      <Field label="Funding purpose" v={m.funding_purpose ?? ""} onChange={(v) => f("funding_purpose", v)} />
+      <Field label="Years in operation" v={m.years_in_operation == null ? "" : String(m.years_in_operation)} onChange={(v) => f("years_in_operation", v)} />
+      <Field label="Existing debt (USD)" v={m.existing_debt == null ? "" : String(m.existing_debt)} onChange={(v) => f("existing_debt", v)} />
+      <Select label="Cashflow strength" v={m.cashflow_strength ?? "Unknown"} options={["Strong", "Adequate", "Weak", "Unknown"]} onChange={(v) => f("cashflow_strength", v)} />
       <Field label="Asset class" v={m.asset_class ?? ""} onChange={(v) => f("asset_class", v)} />
       <Field label="Geography" v={m.geography ?? ""} onChange={(v) => f("geography", v)} />
       <Select label="Stage" v={m.stage} options={[...STAGES]} onChange={(v) => f("stage", v)} />
       <Select label="Sharia status" v={m.sharia_status} options={[...SHARIA]} onChange={(v) => f("sharia_status", v)} />
-      <Area label="Use of proceeds" v={m.use_of_proceeds ?? ""} onChange={(v) => f("use_of_proceeds", v)} />
+      <Area full label="Detailed use of funds" v={m.use_of_funds_detail ?? ""} onChange={(v) => f("use_of_funds_detail", v)} />
+      <Area label="Use of proceeds (legacy)" v={m.use_of_proceeds ?? ""} onChange={(v) => f("use_of_proceeds", v)} />
       <Area label="Sponsor track record" v={m.sponsor_track_record ?? ""} onChange={(v) => f("sponsor_track_record", v)} />
       <Area label="Financial summary" v={m.financial_summary ?? ""} onChange={(v) => f("financial_summary", v)} full />
       <Area label="Internal notes" v={m.notes ?? ""} onChange={(v) => f("notes", v)} full />
@@ -369,4 +380,129 @@ function triggerDownload(blob: Blob, name: string) {
   const a = document.createElement("a");
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function ReviewAndMemo({ mandate, onSaved }: { mandate: any; onSaved: () => void }) {
+  const reviewFn = useServerFn(reviewMandateDocuments);
+  const memoFn = useServerFn(generateDealMemo);
+
+  const review = useMutation({
+    mutationFn: () => reviewFn({ data: { mandateId: mandate.id } }),
+    onSuccess: () => { toast.success("Document review complete."); onSaved(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Review failed"),
+  });
+  const memo = useMutation({
+    mutationFn: () => memoFn({ data: { mandateId: mandate.id } }),
+    onSuccess: () => { toast.success("Deal memo generated."); onSaved(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Memo failed"),
+  });
+
+  const dr = mandate.doc_review as any | null;
+  const dm = mandate.deal_memo as any | null;
+  const ratingColor =
+    mandate.fundability_rating === "High" ? "#107a40" :
+    mandate.fundability_rating === "Medium" ? "#b48214" :
+    mandate.fundability_rating === "Low" ? "#b43232" : "var(--color-muted-foreground)";
+
+  return (
+    <div className="space-y-6">
+      {(mandate.readiness_score_100 != null || mandate.fundability_rating) && (
+        <div className="avi-card p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Readiness Score</p>
+            <p className="mt-1 text-3xl font-bold">{mandate.readiness_score_100 ?? "—"}<span className="text-sm font-normal text-[color:var(--color-muted-foreground)]"> / 100</span></p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Fundability</p>
+            <p className="mt-1 text-2xl font-bold" style={{ color: ratingColor }}>{mandate.fundability_rating ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Funding Purpose</p>
+            <p className="mt-1 text-sm">{mandate.funding_purpose ?? "—"}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="avi-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Document Completeness Review</p>
+            <p className="mt-1 text-sm">AI review of uploaded documents — missing, outdated, and additional information needed.</p>
+            {dr?.reviewed_at && <p className="mt-1 text-[11px] text-[color:var(--color-muted-foreground)]">Last run: {new Date(dr.reviewed_at).toLocaleString()}</p>}
+          </div>
+          <button className="avi-btn-primary" disabled={review.isPending} onClick={() => review.mutate()}>
+            {review.isPending ? "Reviewing…" : dr ? "Re-run Review" : "Run Document Review"}
+          </button>
+        </div>
+        {dr && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <ReviewList title="Missing Documents" items={dr.missing_documents ?? []} />
+            <ReviewList title="Outdated Documents" items={dr.outdated_documents ?? []} />
+            <ReviewList title="Additional Info Requested" items={dr.recommended_additional_information ?? []} />
+            {dr.summary && (
+              <div className="md:col-span-3 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">Summary</p>
+                <p className="mt-1">{dr.summary}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="avi-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Internal Deal Memo</p>
+            <p className="mt-1 text-sm">AI-drafted investment memo for the deal team. <strong>No-assumption rule</strong> enforced.</p>
+            {dm?.generated_at && <p className="mt-1 text-[11px] text-[color:var(--color-muted-foreground)]">Last run: {new Date(dm.generated_at).toLocaleString()}</p>}
+          </div>
+          <button className="avi-btn-primary" disabled={memo.isPending} onClick={() => memo.mutate()}>
+            {memo.isPending ? "Generating…" : dm ? "Regenerate Memo" : "Generate Deal Memo"}
+          </button>
+        </div>
+        {dm && (
+          <div className="mt-4 space-y-4 text-sm">
+            <MemoSection title="Company Overview"><p>{dm.company_overview}</p></MemoSection>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MemoSection title="Funding Requirement"><p>{dm.funding_requirement}</p></MemoSection>
+              <MemoSection title="Use of Funds"><p>{dm.use_of_funds}</p></MemoSection>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MemoSection title="Key Strengths"><BulletList items={dm.key_strengths ?? []} /></MemoSection>
+              <MemoSection title="Key Risks"><BulletList items={dm.key_risks ?? []} /></MemoSection>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MemoSection title="Recommended Financing Products"><BulletList items={dm.recommended_financing_products ?? []} /></MemoSection>
+              <MemoSection title="Recommended Financier Types"><BulletList items={dm.recommended_financier_types ?? []} /></MemoSection>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReviewList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">{title}</p>
+      {items.length === 0
+        ? <p className="mt-1 text-[color:var(--color-muted-foreground)]">None identified.</p>
+        : <ul className="mt-1 list-disc pl-5 space-y-1">{items.map((s, i) => <li key={i}>{s}</li>)}</ul>}
+    </div>
+  );
+}
+
+function MemoSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">{title}</p>
+      <div className="mt-1 leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function BulletList({ items }: { items: string[] }) {
+  if (!items.length) return <p className="text-[color:var(--color-muted-foreground)]">—</p>;
+  return <ul className="list-disc pl-5 space-y-1">{items.map((s, i) => <li key={i}>{s}</li>)}</ul>;
 }

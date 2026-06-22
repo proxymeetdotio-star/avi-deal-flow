@@ -15,8 +15,7 @@ interface ReportPdfArgs {
   report: AssessmentReport;
 }
 
-const FOOTER =
-  "Prepared by Avi.";
+const FOOTER = "Prepared by Avi.";
 
 export function generateAssessmentPdf(args: ReportPdfArgs): jsPDF {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -110,22 +109,40 @@ export function generateAssessmentPdf(args: ReportPdfArgs): jsPDF {
     }
   };
 
-  const scoreBox = (label: string, score: number, x: number) => {
+  const ratingScoreBox = () => {
+    ensureSpace(90);
+    const score = args.report.readiness_score_100;
+    const rating = args.report.fundability_rating;
+    const ratingColor: [number, number, number] =
+      rating === "High" ? [16, 122, 64] : rating === "Medium" ? [180, 130, 20] : [180, 50, 50];
+
     doc.setDrawColor(10);
     doc.setFillColor(245, 245, 245);
-    doc.rect(x, y, 230, 64, "FD");
+    doc.rect(M, y, W - M * 2, 80, "FD");
+
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(90);
-    doc.text(label.toUpperCase(), x + 12, y + 18);
+    doc.text("FUNDING READINESS SCORE", M + 14, y + 20);
+
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(28);
+    doc.setFontSize(36);
     doc.setTextColor(10);
-    doc.text(`${score}`, x + 12, y + 50);
+    doc.text(`${score}`, M + 14, y + 60);
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(120);
-    doc.text("/ 10", x + 12 + doc.getTextWidth(`${score}`) + 4, y + 50);
+    doc.text("/ 100", M + 14 + doc.getTextWidth(`${score}`) + 6, y + 60);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(90);
+    doc.text("FUNDABILITY RATING", W - M - 200, y + 20);
+    doc.setFontSize(24);
+    doc.setTextColor(ratingColor[0], ratingColor[1], ratingColor[2]);
+    doc.text(rating.toUpperCase(), W - M - 200, y + 56);
+
+    y += 90;
   };
 
   // PAGE 1
@@ -139,19 +156,28 @@ export function generateAssessmentPdf(args: ReportPdfArgs): jsPDF {
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
   doc.setTextColor(90);
-  doc.text(
-    `Prepared for ${args.lead.full_name} — ${args.lead.company_name}`,
-    M,
-    y
-  );
+  doc.text(`Prepared for ${args.lead.full_name} — ${args.lead.company_name}`, M, y);
   y += 14;
-  doc.text(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }), M, y);
+  doc.text(
+    new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }),
+    M,
+    y,
+  );
   y += 24;
 
-  ensureSpace(80);
-  scoreBox("Funding Readiness", args.report.funding_readiness_score, M);
-  scoreBox("Investor Attractiveness", args.report.investor_attractiveness_score, M + 250);
-  y += 80;
+  ratingScoreBox();
+
+  h2("Score Breakdown");
+  const sb = args.report.score_breakdown;
+  kv([
+    ["Revenue", `${sb.revenue} / 100`],
+    ["Years in Operation", `${sb.years_in_operation} / 100`],
+    ["Financial Statements", `${sb.financial_statements} / 100`],
+    ["Existing Debt", `${sb.existing_debt} / 100`],
+    ["Cashflow Strength", `${sb.cashflow_strength} / 100`],
+    ["Documentation Completeness", `${sb.documentation_completeness} / 100`],
+  ]);
+  y += 6;
 
   h2("Executive Summary");
   para(args.report.executive_summary);
@@ -167,8 +193,27 @@ export function generateAssessmentPdf(args: ReportPdfArgs): jsPDF {
   ]);
   y += 6;
 
-  h2("Capital Structure Recommendation");
-  para(args.report.capital_structure_recommendation);
+  h2("Recommended Financing Structure");
+  const fr = args.report.financing_recommendation;
+  kv([["Funding Requirement", fr.funding_requirement]]);
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+  ensureSpace(14);
+  doc.text("RECOMMENDED INSTRUMENTS", M, y);
+  y += 12;
+  bullets(fr.recommended_instruments.length ? fr.recommended_instruments : ["Information not provided — to be supplied by sponsor."]);
+  y += 4;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  doc.setTextColor(90);
+  ensureSpace(14);
+  doc.text("LESS SUITABLE INSTRUMENTS", M, y);
+  y += 12;
+  bullets(fr.less_suitable_instruments.length ? fr.less_suitable_instruments : ["—"]);
+  y += 4;
+  para(fr.explanation);
   y += 6;
 
   h2("Key Risks");
@@ -196,7 +241,6 @@ export function generateAssessmentPdf(args: ReportPdfArgs): jsPDF {
   h2("Inputs Provided by Sponsor");
   kv(Object.entries(args.inputs).map(([k, v]) => [k, v || "Information not provided"]));
 
-  // footer on every page
   const total = doc.getNumberOfPages();
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);

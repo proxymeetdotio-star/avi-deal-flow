@@ -4,7 +4,11 @@ import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { assessmentBySlug, type AssessmentMeta } from "@/lib/assessments";
-import { generateAssessmentReport, type AssessmentReport } from "@/lib/ai.functions";
+import {
+  generateAssessmentReport,
+  FUNDING_PURPOSES,
+  type AssessmentReport,
+} from "@/lib/ai.functions";
 import { generateAssessmentPdf } from "@/lib/pdf";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,11 +47,16 @@ export const Route = createFileRoute("/assessment/$slug")({
 interface FormState {
   // assessment
   project_type: string;
-  capital_required: string;
+  funding_amount: string;
+  funding_purpose: string;
+  use_of_funds_detail: string;
   location: string;
   development_stage: string;
   revenue: string;
   ebitda: string;
+  years_in_operation: string;
+  existing_debt: string;
+  cashflow_strength: "Strong" | "Adequate" | "Weak" | "Unknown";
   expected_returns: string;
   financing_structure: string;
   sharia_requirement: "Yes" | "No" | "Preferred";
@@ -57,16 +66,30 @@ interface FormState {
   company_name: string;
   email: string;
   phone: string;
-  capital_sought: string;
   deal_type: "Equity" | "Debt";
 }
 
 const EMPTY: FormState = {
-  project_type: "", capital_required: "", location: "", development_stage: "",
-  revenue: "", ebitda: "", expected_returns: "", financing_structure: "",
-  sharia_requirement: "No", additional_notes: "",
-  full_name: "", company_name: "", email: "", phone: "",
-  capital_sought: "", deal_type: "Equity",
+  project_type: "",
+  funding_amount: "",
+  funding_purpose: "",
+  use_of_funds_detail: "",
+  location: "",
+  development_stage: "",
+  revenue: "",
+  ebitda: "",
+  years_in_operation: "",
+  existing_debt: "",
+  cashflow_strength: "Unknown",
+  expected_returns: "",
+  financing_structure: "",
+  sharia_requirement: "No",
+  additional_notes: "",
+  full_name: "",
+  company_name: "",
+  email: "",
+  phone: "",
+  deal_type: "Equity",
 };
 
 const LeadSchema = z.object({
@@ -74,7 +97,6 @@ const LeadSchema = z.object({
   company_name: z.string().trim().min(1, "Company required").max(160),
   email: z.string().trim().email("Valid email required").max(200),
   phone: z.string().trim().min(4, "Phone required").max(40),
-  capital_sought: z.string().trim().min(1, "Capital sought required").max(80),
   deal_type: z.enum(["Equity", "Debt"]),
 });
 
@@ -90,14 +112,19 @@ function AssessmentPage() {
     setForm((f) => ({ ...f, [k]: v }));
 
   const inputsForReport = (): Record<string, string> => ({
-    "Project type": form.project_type,
-    "Capital required (USD)": form.capital_required,
+    "Project / business type": form.project_type,
+    "Funding amount required (USD)": form.funding_amount,
+    "Funding purpose": form.funding_purpose,
+    "Detailed use of funds": form.use_of_funds_detail,
     "Location": form.location,
     "Development stage": form.development_stage,
-    "Revenue (USD)": form.revenue,
-    "EBITDA (USD)": form.ebitda,
+    "Revenue (USD, last full year)": form.revenue,
+    "EBITDA (USD, last full year)": form.ebitda,
+    "Years in operation": form.years_in_operation,
+    "Existing debt (USD)": form.existing_debt,
+    "Cashflow strength": form.cashflow_strength,
     "Expected returns": form.expected_returns,
-    "Financing structure": form.financing_structure,
+    "Preferred financing structure": form.financing_structure,
     "Sharia requirement": form.sharia_requirement,
     "Additional notes": form.additional_notes,
   });
@@ -121,11 +148,17 @@ function AssessmentPage() {
         company_name: form.company_name,
         email: form.email,
         phone: form.phone,
-        capital_sought: form.capital_sought,
+        capital_sought: form.funding_amount,
+        funding_amount: parseNumeric(form.funding_amount),
+        funding_purpose: form.funding_purpose || null,
+        use_of_funds_detail: form.use_of_funds_detail || null,
+        years_in_operation: parseInt10(form.years_in_operation),
+        existing_debt: parseNumeric(form.existing_debt),
+        cashflow_strength: form.cashflow_strength,
         deal_type: form.deal_type,
         inputs: inputsForReport(),
-        funding_readiness_score: result.funding_readiness_score,
-        investor_attractiveness_score: result.investor_attractiveness_score,
+        readiness_score_100: result.readiness_score_100,
+        fundability_rating: result.fundability_rating,
         report: result as unknown as never,
       });
       if (error) console.error("lead insert", error);
@@ -148,7 +181,7 @@ function AssessmentPage() {
         company_name: form.company_name,
         email: form.email,
         phone: form.phone,
-        capital_sought: form.capital_sought,
+        capital_sought: form.funding_amount,
         deal_type: form.deal_type,
       },
       inputs: inputsForReport(),
@@ -184,6 +217,15 @@ function AssessmentPage() {
   );
 }
 
+function parseNumeric(s: string): number | null {
+  const n = Number((s || "").replace(/[^0-9.\-]/g, ""));
+  return Number.isFinite(n) && n !== 0 ? n : null;
+}
+function parseInt10(s: string): number | null {
+  const n = parseInt((s || "").replace(/[^0-9\-]/g, ""), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
 function Steps({ current }: { current: "form" | "lead" | "report" }) {
   const items: Array<["form" | "lead" | "report", string]> = [
     ["form", "Inputs"],
@@ -213,9 +255,9 @@ function Steps({ current }: { current: "form" | "lead" | "report" }) {
   );
 }
 
-function Field(props: { label: string; children: React.ReactNode; hint?: string }) {
+function Field(props: { label: string; children: React.ReactNode; hint?: string; full?: boolean }) {
   return (
-    <label className="block">
+    <label className={`block ${props.full ? "md:col-span-2" : ""}`}>
       <span className="avi-label">{props.label}</span>
       {props.children}
       {props.hint && <span className="mt-1 block text-[11px] text-[color:var(--color-muted-foreground)]">{props.hint}</span>}
@@ -233,7 +275,12 @@ function FormStep({
 }) {
   return (
     <form
-      onSubmit={(e) => { e.preventDefault(); onNext(); }}
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (!form.funding_purpose) { toast.error("Please select a funding purpose."); return; }
+        if (!form.use_of_funds_detail.trim()) { toast.error("Please describe the use of funds."); return; }
+        onNext();
+      }}
       className="avi-card mt-10 p-6 md:p-8 space-y-6"
     >
       <p className="text-xs text-[color:var(--color-muted-foreground)]">
@@ -245,14 +292,33 @@ function FormStep({
         <Field label="Project / business type">
           <input className="avi-input" required maxLength={200} value={form.project_type} onChange={(e) => set("project_type", e.target.value)} />
         </Field>
-        <Field label="Capital required (USD)">
-          <input className="avi-input" required maxLength={80} placeholder="e.g. 25,000,000" value={form.capital_required} onChange={(e) => set("capital_required", e.target.value)} />
+        <Field label="Funding amount required (USD)">
+          <input className="avi-input" required maxLength={80} placeholder="e.g. 25,000,000" value={form.funding_amount} onChange={(e) => set("funding_amount", e.target.value)} />
+        </Field>
+        <Field label="Funding purpose">
+          <select className="avi-input" required value={form.funding_purpose} onChange={(e) => set("funding_purpose", e.target.value)}>
+            <option value="">Select…</option>
+            {FUNDING_PURPOSES.map((p) => <option key={p} value={p}>{p}</option>)}
+          </select>
         </Field>
         <Field label="Location">
           <input className="avi-input" required maxLength={200} placeholder="City, Country" value={form.location} onChange={(e) => set("location", e.target.value)} />
         </Field>
-        <Field label="Development stage">
-          <input className="avi-input" maxLength={200} placeholder="e.g. Land secured, permits granted" value={form.development_stage} onChange={(e) => set("development_stage", e.target.value)} />
+        <Field full label="Detailed explanation of use of funds" hint="What exactly will the capital be deployed against?">
+          <textarea
+            className="avi-input min-h-[110px]"
+            required
+            maxLength={4000}
+            placeholder="e.g. AED 15M for inventory expansion, AED 5M for new equipment, AED 5M for export LC facility…"
+            value={form.use_of_funds_detail}
+            onChange={(e) => set("use_of_funds_detail", e.target.value)}
+          />
+        </Field>
+        <Field label="Development / company stage">
+          <input className="avi-input" maxLength={200} placeholder="e.g. Operating 8 yrs, expansion phase" value={form.development_stage} onChange={(e) => set("development_stage", e.target.value)} />
+        </Field>
+        <Field label="Years in operation">
+          <input className="avi-input" inputMode="numeric" maxLength={4} value={form.years_in_operation} onChange={(e) => set("years_in_operation", e.target.value)} />
         </Field>
         <Field label="Revenue (USD)" hint="Last full year, if applicable.">
           <input className="avi-input" maxLength={80} value={form.revenue} onChange={(e) => set("revenue", e.target.value)} />
@@ -260,10 +326,21 @@ function FormStep({
         <Field label="EBITDA (USD)" hint="Last full year, if applicable.">
           <input className="avi-input" maxLength={80} value={form.ebitda} onChange={(e) => set("ebitda", e.target.value)} />
         </Field>
+        <Field label="Existing debt (USD)">
+          <input className="avi-input" maxLength={80} placeholder="0 if none" value={form.existing_debt} onChange={(e) => set("existing_debt", e.target.value)} />
+        </Field>
+        <Field label="Cashflow strength">
+          <select className="avi-input" value={form.cashflow_strength} onChange={(e) => set("cashflow_strength", e.target.value as FormState["cashflow_strength"])}>
+            <option>Strong</option>
+            <option>Adequate</option>
+            <option>Weak</option>
+            <option>Unknown</option>
+          </select>
+        </Field>
         <Field label="Expected returns">
           <input className="avi-input" maxLength={200} placeholder="IRR / coupon / multiple" value={form.expected_returns} onChange={(e) => set("expected_returns", e.target.value)} />
         </Field>
-        <Field label="Financing structure">
+        <Field label="Preferred financing structure">
           <select className="avi-input" value={form.financing_structure} onChange={(e) => set("financing_structure", e.target.value)}>
             <option value="">Select…</option>
             <option>Equity</option>
@@ -271,7 +348,7 @@ function FormStep({
             <option>Mezzanine</option>
             <option>Islamic Finance</option>
             <option>Joint Venture</option>
-            <option>Other</option>
+            <option>Open to recommendation</option>
           </select>
         </Field>
         <Field label="Sharia requirement">
@@ -281,11 +358,9 @@ function FormStep({
             <option value="No">No — Not required</option>
           </select>
         </Field>
-        <div className="md:col-span-2">
-          <Field label="Additional notes">
-            <textarea className="avi-input min-h-[120px]" maxLength={4000} value={form.additional_notes} onChange={(e) => set("additional_notes", e.target.value)} />
-          </Field>
-        </div>
+        <Field full label="Additional notes">
+          <textarea className="avi-input min-h-[100px]" maxLength={4000} value={form.additional_notes} onChange={(e) => set("additional_notes", e.target.value)} />
+        </Field>
       </div>
 
       <div className="flex justify-end pt-2">
@@ -319,8 +394,7 @@ function LeadStep({
         <Field label="Company name"><input className="avi-input" required maxLength={160} value={form.company_name} onChange={(e) => set("company_name", e.target.value)} /></Field>
         <Field label="Email"><input type="email" className="avi-input" required maxLength={200} value={form.email} onChange={(e) => set("email", e.target.value)} /></Field>
         <Field label="Phone"><input className="avi-input" required maxLength={40} value={form.phone} onChange={(e) => set("phone", e.target.value)} /></Field>
-        <Field label="Capital sought (USD)"><input className="avi-input" required maxLength={80} value={form.capital_sought} onChange={(e) => set("capital_sought", e.target.value)} /></Field>
-        <Field label="Deal type">
+        <Field label="Deal type (your preference)">
           <select className="avi-input" value={form.deal_type} onChange={(e) => set("deal_type", e.target.value as FormState["deal_type"])}>
             <option>Equity</option>
             <option>Debt</option>
@@ -351,13 +425,44 @@ function ReportStep({
         <p className="text-[11px] font-bold uppercase tracking-[0.25em] text-[color:var(--color-muted-foreground)]">
           Avi Report — {meta.title}
         </p>
-        <div className="mt-6 grid grid-cols-2 gap-4">
-          <ScoreCard label="Funding Readiness" score={report.funding_readiness_score} />
-          <ScoreCard label="Investor Attractiveness" score={report.investor_attractiveness_score} />
-        </div>
+
+        <ReadinessHero report={report} />
+
+        <Section title="Score Breakdown">
+          <ScoreGrid breakdown={report.score_breakdown} />
+        </Section>
 
         <Section title="Executive Summary"><p>{report.executive_summary}</p></Section>
-        <Section title="Capital Structure Recommendation"><p>{report.capital_structure_recommendation}</p></Section>
+
+        <Section title="Recommended Financing Structure">
+          <div className="space-y-3">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">Funding Requirement</p>
+              <p className="mt-1">{report.financing_recommendation.funding_requirement}</p>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">Recommended Instruments</p>
+              {report.financing_recommendation.recommended_instruments.length > 0 ? (
+                <ul className="mt-1 list-disc pl-5 space-y-1">
+                  {report.financing_recommendation.recommended_instruments.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              ) : <p className="mt-1">Information not provided — to be supplied by sponsor.</p>}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">Less Suitable Instruments</p>
+              {report.financing_recommendation.less_suitable_instruments.length > 0 ? (
+                <ul className="mt-1 list-disc pl-5 space-y-1">
+                  {report.financing_recommendation.less_suitable_instruments.map((r, i) => <li key={i}>{r}</li>)}
+                </ul>
+              ) : <p className="mt-1">—</p>}
+            </div>
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">Explanation</p>
+              <p className="mt-1">{report.financing_recommendation.explanation}</p>
+            </div>
+          </div>
+        </Section>
+
         <Section title="Key Risks">
           {report.key_risks.length > 0
             ? <ul className="list-disc pl-5 space-y-1">{report.key_risks.map((r, i) => <li key={i}>{r}</li>)}</ul>
@@ -377,18 +482,53 @@ function ReportStep({
         <button onClick={onReset} className="avi-btn-ghost">Run another assessment</button>
         <button onClick={onDownload} className="avi-btn-primary">Download Branded PDF</button>
       </div>
-      <p className="text-[11px] text-[color:var(--color-muted-foreground)]">
-        Prepared by Avi.
-      </p>
+      <p className="text-[11px] text-[color:var(--color-muted-foreground)]">Prepared by Avi.</p>
     </div>
   );
 }
 
-function ScoreCard({ label, score }: { label: string; score: number }) {
+function ReadinessHero({ report }: { report: AssessmentReport }) {
+  const color =
+    report.fundability_rating === "High" ? "#107a40" :
+    report.fundability_rating === "Medium" ? "#b48214" : "#b43232";
   return (
-    <div className="border p-4" style={{ borderColor: "var(--color-border)", borderRadius: 8 }}>
-      <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">{label}</p>
-      <p className="mt-2 text-4xl font-bold">{score}<span className="text-base font-normal text-[color:var(--color-muted-foreground)]"> / 10</span></p>
+    <div
+      className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 p-5 rounded"
+      style={{ border: "1px solid var(--color-border)", backgroundColor: "var(--color-secondary)" }}
+    >
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Funding Readiness Score</p>
+        <p className="mt-2 text-5xl font-bold">{report.readiness_score_100}<span className="text-lg font-normal text-[color:var(--color-muted-foreground)]"> / 100</span></p>
+      </div>
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Fundability Rating</p>
+        <p className="mt-2 text-4xl font-bold" style={{ color }}>{report.fundability_rating}</p>
+        <p className="mt-1 text-[11px] text-[color:var(--color-muted-foreground)]">High ≥ 75 · Medium 50–74 · Low &lt; 50</p>
+      </div>
+    </div>
+  );
+}
+
+function ScoreGrid({ breakdown }: { breakdown: AssessmentReport["score_breakdown"] }) {
+  const items: [string, number][] = [
+    ["Revenue", breakdown.revenue],
+    ["Years in Operation", breakdown.years_in_operation],
+    ["Financial Statements", breakdown.financial_statements],
+    ["Existing Debt", breakdown.existing_debt],
+    ["Cashflow Strength", breakdown.cashflow_strength],
+    ["Documentation Completeness", breakdown.documentation_completeness],
+  ];
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+      {items.map(([label, score]) => (
+        <div key={label} className="border p-3" style={{ borderColor: "var(--color-border)", borderRadius: 6 }}>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">{label}</p>
+          <p className="mt-1 text-xl font-bold">{score}<span className="text-xs font-normal text-[color:var(--color-muted-foreground)]"> / 100</span></p>
+          <div className="mt-2 h-1.5 w-full" style={{ backgroundColor: "var(--color-border)" }}>
+            <div className="h-1.5" style={{ width: `${score}%`, backgroundColor: "var(--color-foreground)" }} />
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

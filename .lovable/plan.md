@@ -1,47 +1,83 @@
-## Module 2 — Mandate Creation
+## Current outcome (for context)
 
-### Database
-- `mandates` table: `lead_id` (FK, nullable), `sponsor_name`, `company_name`, `email`, `phone`, `deal_type` (Equity/Debt), `asset_class`, `geography`, `capital_sought`, `use_of_proceeds`, `sponsor_track_record`, `financial_summary`, `sharia_status` (Required / Not Required / Pending), `stage` (Draft / Under Review / Ready to Package / Live / Closed / Archived), `archived_at`, `notes`, admin-only RLS.
-- `mandate_documents` table: uploaded files — `mandate_id`, `storage_path`, `file_name`, `file_size`, `doc_type` (Pitch Deck / Financials / Trade License / Title Deed / Valuation / KYC / Other), `analysis` (jsonb), `analyzed_at`. Max 20 enforced in UI + trigger.
-- `mandate_generated_documents` table: AI outputs — `mandate_id`, `doc_kind` (Teaser / Info Memo / Financial Model Summary / Investor Deck / Term Sheet / Risk Memo / Sharia Memo / Debt Structure Memo / Covenant Pack / etc.), `format` (pdf/docx/pptx), `storage_path`, `content` (jsonb structured), `generated_at`.
-- Private storage bucket `mandate-files` with admin-only RLS on `storage.objects`.
+Today the sponsor goes through 3 steps: Inputs → Your Details → Report. The report already shows:
+- Funding Readiness score (1–10)
+- Investor Attractiveness score (1–10)
+- Executive Summary, Capital Structure Recommendation, Key Risks, Next Steps, optional Sharia note
+- "Download Branded PDF"
+There is no funding-purpose dropdown, no 0–100 rating, no instrument suitability list, no doc-completeness section, and no internal deal memo. Document upload + review only exists later, inside `/admin/mandates/$id` after a lead is converted.
 
-### Admin UI
-- **Leads dashboard**: add "Convert to Mandate" action on each lead → creates draft mandate prefilled from lead + report, navigates to detail.
-- **`/admin/mandates`**: list with stage filter, search, archive toggle.
-- **`/admin/mandates/$id`**: tabbed detail view
-  - *Overview*: editable mandate fields, stage selector, sharia status, archive button.
-  - *Documents*: drag-drop uploader (max 20, type labels), per-file "Analyze with AI" → extracts summary/key terms/red flags into `analysis`.
-  - *Generated Package*: "Generate Deal Package" button → produces 7 docs for Equity / 8 for Debt (Sharia memo added conditionally). Each item shows status + download buttons (PDF/DOCX/PPTX).
-  - *Activity*: notes + status history.
+## What changes
 
-### AI Server Functions
-- `analyzeMandateDocument({ documentId })` — Gemini Pro with file input; returns `{ summary, key_terms, financials_extracted, red_flags, missing_info }`. **No-assumptions rule** baked into system prompt: "Do not infer numbers, names, or terms not present in the source. Mark unknowns as `null` and list under `missing_info`."
-- `generateMandatePackage({ mandateId })` — orchestrator that, for each required doc kind, calls Gemini with mandate data + analyzed docs, returns structured JSON. Caller then renders to:
-  - **PDF** via `jspdf` (already installed) with Avi letterhead/footer/disclaimer
-  - **DOCX** via `docx` npm package
-  - **PPTX** via `pptxgenjs` for the Investor Deck
-  - Files uploaded to `mandate-files/generated/{mandateId}/{kind}.{ext}`
+Business model, workflow, fee structure unchanged. SME → Assessment → Matching → Introduction → Success Fee.
 
-### Deal Package matrix
-- **Equity (7)**: Teaser, Information Memorandum, Investor Deck (PPTX), Financial Model Summary, Term Sheet, Risk Memo, Process Letter.
-- **Debt (8)**: Teaser, Information Memorandum, Investor Deck (PPTX), Financial Model Summary, Term Sheet, Risk Memo, Debt Structure Memo, Covenant Pack.
-- **+ Sharia Compliance Memo** appended when `sharia_status = Required`.
+### 1. Assessment form (all three: SME, Real Estate, Sharia Compliance)
+Replace the single "Capital required" / "Capital sought" with three fields:
+- **Funding Amount Required** (USD)
+- **Funding Purpose** — dropdown of the 15 options listed (Working Capital, Trade Finance, Inventory Purchase, Import Financing, Export Financing, Equipment Purchase, Asset Finance, Expansion, Acquisition, Project Finance, Real Estate, Construction Finance, Bridge Funding, Debt Refinancing, Equity Capital)
+- **Detailed Explanation of Use of Funds** (textarea)
 
-### Branding
-- Shared `aviBrand` util providing letterhead header, footer ("Prepared by Avi — Regulated by the DFSA via Index & Cie"), disclaimer, color tokens. Applied uniformly across PDF/DOCX/PPTX generators.
+Also add light fields needed for the 0–100 score (only ones not already captured):
+- Years in Operation
+- Existing Debt (USD)
+- Cashflow Strength (Strong / Adequate / Weak / Unknown)
 
-### Sequencing
-1. Migration (tables + bucket + RLS).
-2. Storage bucket via tool.
-3. Mandate CRUD server fns + admin list/detail UI + Convert-to-Mandate action.
-4. Document upload + analysis fn + UI.
-5. Generators (PDF/DOCX/PPTX) + orchestrator fn + UI.
-6. Smoke test end-to-end as admin.
+### 2. AI report (sponsor-facing) — upgraded
+Server function `generateAssessmentReport` rewritten to return:
+- **Funding Readiness Score (0–100)** + **Fundability Rating** (High ≥75 / Medium 50–74 / Low <50), with a short breakdown of the 6 drivers (Revenue, Years in Operation, Financial Statements, Existing Debt, Cashflow, Documentation Completeness)
+- **Recommended Financing Structure**
+  - Funding Requirement (echo)
+  - Recommended Instruments (ranked)
+  - Less Suitable Instruments
+  - Explanation
+- Existing sections retained: Executive Summary, Key Risks, Suggested Next Steps, Sharia Assessment (when applicable)
+- "Investor Attractiveness (1–10)" is removed — superseded by the 0–100 score
+- Strict no-assumptions rule preserved
 
-### Out of scope for v1
-- Investor outreach, deal rooms, LOI workflow (later modules).
-- Sponsor self-serve (admin-only).
-- Realtime collaboration on a mandate.
+The report is rendered on screen and in the branded PDF. Sponsor sees readiness + financing recommendations as you requested.
+
+### 3. Document Completeness Review (admin-only, post-conversion)
+Stays in the existing mandate documents flow. Add a new admin action on `/admin/mandates/$id` → **"Run Document Completeness Review"** which calls a new server fn `reviewMandateDocuments({ mandateId })`. Uses already-analyzed `mandate_documents.analysis` plus the mandate's deal_type / asset_class / sharia_status to return:
+- Missing Documents
+- Outdated Documents
+- Recommended Additional Information
+
+Result stored on `mandates.doc_review` (jsonb) and shown in a new "Doc Review" panel on the Documents tab.
+
+### 4. AI Deal Summary (internal investment memo, admin-only)
+New admin action on `/admin/mandates/$id` → **"Generate Deal Memo"**, server fn `generateDealMemo({ mandateId })`, returns:
+- Company Overview
+- Funding Requirement
+- Use of Funds
+- Key Strengths
+- Key Risks
+- Recommended Financing Products
+- Recommended Financier Types (no specific financiers yet — matching deferred)
+Stored on `mandates.deal_memo` (jsonb), rendered in a new "Deal Memo" tab, downloadable as PDF via existing brand util.
+
+### 5. Financier Match Score
+**Deferred per your answer.** No financiers table, no matching UI in this pass. We'll add it as a follow-up once the financier database is defined.
+
+## Technical details
+
+**DB migration**
+- `leads`: add `funding_amount` numeric, `funding_purpose` text, `use_of_funds_detail` text, `years_in_operation` int, `existing_debt` numeric, `cashflow_strength` text, `readiness_score_100` int, `fundability_rating` text (High/Medium/Low). Keep existing `capital_sought` for backward compatibility.
+- `mandates`: add `funding_purpose` text, `use_of_funds_detail` text, `years_in_operation` int, `existing_debt` numeric, `cashflow_strength` text, `readiness_score_100` int, `fundability_rating` text, `doc_review` jsonb, `deal_memo` jsonb.
+- GRANTs + RLS preserved (admin-only on mandates; existing lead policies unchanged).
+- "Convert to Mandate" carries the new fields over.
+
+**Server functions** (`src/lib/`)
+- `ai.functions.ts` — rewrite `generateAssessmentReport` schema; new `AssessmentReport` type with `readiness_score_100`, `fundability_rating`, `score_breakdown`, `recommended_instruments[]`, `less_suitable_instruments[]`, `financing_explanation`. Uses `google/gemini-2.5-pro` with strict JSON schema and the same no-assumptions system prompt.
+- `mandate-review.functions.ts` (new) — `reviewMandateDocuments` and `generateDealMemo`, both `.middleware([requireSupabaseAuth])` + admin check via `has_role`.
+
+**UI**
+- `src/routes/assessment.$slug.tsx` — new fields in `FormStep` + `LeadStep`; `ReportStep` renders the 0–100 score with rating chip, financing recommendation block, score-driver breakdown.
+- `src/lib/pdf.ts` — extend PDF template with the new sections.
+- `src/routes/_authenticated/mandates.$id.tsx` — add Doc Review panel + Deal Memo tab + buttons.
+
+**Out of scope this pass**
+- Financiers table + match scoring (deferred until you have the financier list).
+- Changes to existing mandate deal-package generators.
+- Sponsor-facing doc upload (review stays at mandate stage as you confirmed).
 
 Approve and I'll start with the migration.
