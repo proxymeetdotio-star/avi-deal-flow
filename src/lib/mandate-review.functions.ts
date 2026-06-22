@@ -123,7 +123,7 @@ Produce the JSON document-completeness review now.`;
     };
 
     const { error: ue } = await context.supabase
-      .from("mandates").update({ doc_review: review }).eq("id", data.mandateId);
+      .from("mandates").update({ doc_review: review as unknown as never }).eq("id", data.mandateId);
     if (ue) throw new Error(ue.message);
     return review;
   });
@@ -201,7 +201,7 @@ Produce the JSON internal deal memo now.`;
     };
 
     const { error: ue } = await context.supabase
-      .from("mandates").update({ deal_memo: memo }).eq("id", data.mandateId);
+      .from("mandates").update({ deal_memo: memo as unknown as never }).eq("id", data.mandateId);
     if (ue) throw new Error(ue.message);
     return memo;
   });
