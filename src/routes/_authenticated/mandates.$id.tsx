@@ -86,6 +86,10 @@ function Overview({ mandate, onSaved }: { mandate: any; onSaved: () => void }) {
     mutationFn: () => updateFn({ data: { id: mandate.id, patch: {
       sponsor_name: m.sponsor_name, company_name: m.company_name, email: m.email, phone: m.phone,
       deal_type: m.deal_type, asset_class: m.asset_class, geography: m.geography, capital_sought: m.capital_sought,
+      funding_purpose: m.funding_purpose, use_of_funds_detail: m.use_of_funds_detail,
+      years_in_operation: m.years_in_operation == null || m.years_in_operation === "" ? null : Number(m.years_in_operation),
+      existing_debt: m.existing_debt == null || m.existing_debt === "" ? null : Number(m.existing_debt),
+      cashflow_strength: m.cashflow_strength,
       use_of_proceeds: m.use_of_proceeds, sponsor_track_record: m.sponsor_track_record,
       financial_summary: m.financial_summary, sharia_status: m.sharia_status, stage: m.stage, notes: m.notes,
     }}}),
@@ -107,11 +111,16 @@ function Overview({ mandate, onSaved }: { mandate: any; onSaved: () => void }) {
       <Field label="Phone" v={m.phone} onChange={(v) => f("phone", v)} />
       <Select label="Deal type" v={m.deal_type} options={["Equity", "Debt"]} onChange={(v) => f("deal_type", v)} />
       <Field label="Capital sought" v={m.capital_sought} onChange={(v) => f("capital_sought", v)} />
+      <Field label="Funding purpose" v={m.funding_purpose ?? ""} onChange={(v) => f("funding_purpose", v)} />
+      <Field label="Years in operation" v={m.years_in_operation == null ? "" : String(m.years_in_operation)} onChange={(v) => f("years_in_operation", v)} />
+      <Field label="Existing debt (USD)" v={m.existing_debt == null ? "" : String(m.existing_debt)} onChange={(v) => f("existing_debt", v)} />
+      <Select label="Cashflow strength" v={m.cashflow_strength ?? "Unknown"} options={["Strong", "Adequate", "Weak", "Unknown"]} onChange={(v) => f("cashflow_strength", v)} />
       <Field label="Asset class" v={m.asset_class ?? ""} onChange={(v) => f("asset_class", v)} />
       <Field label="Geography" v={m.geography ?? ""} onChange={(v) => f("geography", v)} />
       <Select label="Stage" v={m.stage} options={[...STAGES]} onChange={(v) => f("stage", v)} />
       <Select label="Sharia status" v={m.sharia_status} options={[...SHARIA]} onChange={(v) => f("sharia_status", v)} />
-      <Area label="Use of proceeds" v={m.use_of_proceeds ?? ""} onChange={(v) => f("use_of_proceeds", v)} />
+      <Area full label="Detailed use of funds" v={m.use_of_funds_detail ?? ""} onChange={(v) => f("use_of_funds_detail", v)} />
+      <Area label="Use of proceeds (legacy)" v={m.use_of_proceeds ?? ""} onChange={(v) => f("use_of_proceeds", v)} />
       <Area label="Sponsor track record" v={m.sponsor_track_record ?? ""} onChange={(v) => f("sponsor_track_record", v)} />
       <Area label="Financial summary" v={m.financial_summary ?? ""} onChange={(v) => f("financial_summary", v)} full />
       <Area label="Internal notes" v={m.notes ?? ""} onChange={(v) => f("notes", v)} full />
