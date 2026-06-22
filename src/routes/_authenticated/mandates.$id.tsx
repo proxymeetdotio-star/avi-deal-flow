@@ -372,3 +372,128 @@ function triggerDownload(blob: Blob, name: string) {
   a.href = url; a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
+
+function ReviewAndMemo({ mandate, onSaved }: { mandate: any; onSaved: () => void }) {
+  const reviewFn = useServerFn(reviewMandateDocuments);
+  const memoFn = useServerFn(generateDealMemo);
+
+  const review = useMutation({
+    mutationFn: () => reviewFn({ data: { mandateId: mandate.id } }),
+    onSuccess: () => { toast.success("Document review complete."); onSaved(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Review failed"),
+  });
+  const memo = useMutation({
+    mutationFn: () => memoFn({ data: { mandateId: mandate.id } }),
+    onSuccess: () => { toast.success("Deal memo generated."); onSaved(); },
+    onError: (e) => toast.error(e instanceof Error ? e.message : "Memo failed"),
+  });
+
+  const dr = mandate.doc_review as any | null;
+  const dm = mandate.deal_memo as any | null;
+  const ratingColor =
+    mandate.fundability_rating === "High" ? "#107a40" :
+    mandate.fundability_rating === "Medium" ? "#b48214" :
+    mandate.fundability_rating === "Low" ? "#b43232" : "var(--color-muted-foreground)";
+
+  return (
+    <div className="space-y-6">
+      {(mandate.readiness_score_100 != null || mandate.fundability_rating) && (
+        <div className="avi-card p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Readiness Score</p>
+            <p className="mt-1 text-3xl font-bold">{mandate.readiness_score_100 ?? "—"}<span className="text-sm font-normal text-[color:var(--color-muted-foreground)]"> / 100</span></p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Fundability</p>
+            <p className="mt-1 text-2xl font-bold" style={{ color: ratingColor }}>{mandate.fundability_rating ?? "—"}</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Funding Purpose</p>
+            <p className="mt-1 text-sm">{mandate.funding_purpose ?? "—"}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="avi-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Document Completeness Review</p>
+            <p className="mt-1 text-sm">AI review of uploaded documents — missing, outdated, and additional information needed.</p>
+            {dr?.reviewed_at && <p className="mt-1 text-[11px] text-[color:var(--color-muted-foreground)]">Last run: {new Date(dr.reviewed_at).toLocaleString()}</p>}
+          </div>
+          <button className="avi-btn-primary" disabled={review.isPending} onClick={() => review.mutate()}>
+            {review.isPending ? "Reviewing…" : dr ? "Re-run Review" : "Run Document Review"}
+          </button>
+        </div>
+        {dr && (
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <ReviewList title="Missing Documents" items={dr.missing_documents ?? []} />
+            <ReviewList title="Outdated Documents" items={dr.outdated_documents ?? []} />
+            <ReviewList title="Additional Info Requested" items={dr.recommended_additional_information ?? []} />
+            {dr.summary && (
+              <div className="md:col-span-3 border-t pt-3" style={{ borderColor: "var(--color-border)" }}>
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">Summary</p>
+                <p className="mt-1">{dr.summary}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="avi-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[color:var(--color-muted-foreground)]">Internal Deal Memo</p>
+            <p className="mt-1 text-sm">AI-drafted investment memo for the deal team. <strong>No-assumption rule</strong> enforced.</p>
+            {dm?.generated_at && <p className="mt-1 text-[11px] text-[color:var(--color-muted-foreground)]">Last run: {new Date(dm.generated_at).toLocaleString()}</p>}
+          </div>
+          <button className="avi-btn-primary" disabled={memo.isPending} onClick={() => memo.mutate()}>
+            {memo.isPending ? "Generating…" : dm ? "Regenerate Memo" : "Generate Deal Memo"}
+          </button>
+        </div>
+        {dm && (
+          <div className="mt-4 space-y-4 text-sm">
+            <MemoSection title="Company Overview"><p>{dm.company_overview}</p></MemoSection>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MemoSection title="Funding Requirement"><p>{dm.funding_requirement}</p></MemoSection>
+              <MemoSection title="Use of Funds"><p>{dm.use_of_funds}</p></MemoSection>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MemoSection title="Key Strengths"><BulletList items={dm.key_strengths ?? []} /></MemoSection>
+              <MemoSection title="Key Risks"><BulletList items={dm.key_risks ?? []} /></MemoSection>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <MemoSection title="Recommended Financing Products"><BulletList items={dm.recommended_financing_products ?? []} /></MemoSection>
+              <MemoSection title="Recommended Financier Types"><BulletList items={dm.recommended_financier_types ?? []} /></MemoSection>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReviewList({ title, items }: { title: string; items: string[] }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">{title}</p>
+      {items.length === 0
+        ? <p className="mt-1 text-[color:var(--color-muted-foreground)]">None identified.</p>
+        : <ul className="mt-1 list-disc pl-5 space-y-1">{items.map((s, i) => <li key={i}>{s}</li>)}</ul>}
+    </div>
+  );
+}
+
+function MemoSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--color-muted-foreground)]">{title}</p>
+      <div className="mt-1 leading-relaxed">{children}</div>
+    </div>
+  );
+}
+
+function BulletList({ items }: { items: string[] }) {
+  if (!items.length) return <p className="text-[color:var(--color-muted-foreground)]">—</p>;
+  return <ul className="list-disc pl-5 space-y-1">{items.map((s, i) => <li key={i}>{s}</li>)}</ul>;
+}
