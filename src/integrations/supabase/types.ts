@@ -18,56 +18,80 @@ export type Database = {
         Row: {
           assessment_type: Database["public"]["Enums"]["assessment_type"]
           capital_sought: string
+          cashflow_strength: string | null
           company_name: string
           created_at: string
           deal_type: Database["public"]["Enums"]["deal_type"]
           email: string
+          existing_debt: number | null
           full_name: string
+          fundability_rating: string | null
+          funding_amount: number | null
+          funding_purpose: string | null
           funding_readiness_score: number | null
           id: string
           inputs: Json
           investor_attractiveness_score: number | null
           notes: string | null
           phone: string
+          readiness_score_100: number | null
           report: Json | null
           status: Database["public"]["Enums"]["lead_status"]
           updated_at: string
+          use_of_funds_detail: string | null
+          years_in_operation: number | null
         }
         Insert: {
           assessment_type: Database["public"]["Enums"]["assessment_type"]
           capital_sought: string
+          cashflow_strength?: string | null
           company_name: string
           created_at?: string
           deal_type: Database["public"]["Enums"]["deal_type"]
           email: string
+          existing_debt?: number | null
           full_name: string
+          fundability_rating?: string | null
+          funding_amount?: number | null
+          funding_purpose?: string | null
           funding_readiness_score?: number | null
           id?: string
           inputs?: Json
           investor_attractiveness_score?: number | null
           notes?: string | null
           phone: string
+          readiness_score_100?: number | null
           report?: Json | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
+          use_of_funds_detail?: string | null
+          years_in_operation?: number | null
         }
         Update: {
           assessment_type?: Database["public"]["Enums"]["assessment_type"]
           capital_sought?: string
+          cashflow_strength?: string | null
           company_name?: string
           created_at?: string
           deal_type?: Database["public"]["Enums"]["deal_type"]
           email?: string
+          existing_debt?: number | null
           full_name?: string
+          fundability_rating?: string | null
+          funding_amount?: number | null
+          funding_purpose?: string | null
           funding_readiness_score?: number | null
           id?: string
           inputs?: Json
           investor_attractiveness_score?: number | null
           notes?: string | null
           phone?: string
+          readiness_score_100?: number | null
           report?: Json | null
           status?: Database["public"]["Enums"]["lead_status"]
           updated_at?: string
+          use_of_funds_detail?: string | null
+          years_in_operation?: number | null
         }
         Relationships: []
       }
@@ -173,67 +197,94 @@ export type Database = {
           archived_at: string | null
           asset_class: string | null
           capital_sought: string
+          cashflow_strength: string | null
           company_name: string
           created_at: string
           created_by: string | null
+          deal_memo: Json | null
           deal_type: Database["public"]["Enums"]["deal_type"]
+          doc_review: Json | null
           email: string
+          existing_debt: number | null
           financial_summary: string | null
+          fundability_rating: string | null
+          funding_purpose: string | null
           geography: string | null
           id: string
           lead_id: string | null
           notes: string | null
           phone: string
+          readiness_score_100: number | null
           sharia_status: Database["public"]["Enums"]["sharia_status"]
           sponsor_name: string
           sponsor_track_record: string | null
           stage: Database["public"]["Enums"]["mandate_stage"]
           updated_at: string
+          use_of_funds_detail: string | null
           use_of_proceeds: string | null
+          years_in_operation: number | null
         }
         Insert: {
           archived_at?: string | null
           asset_class?: string | null
           capital_sought: string
+          cashflow_strength?: string | null
           company_name: string
           created_at?: string
           created_by?: string | null
+          deal_memo?: Json | null
           deal_type: Database["public"]["Enums"]["deal_type"]
+          doc_review?: Json | null
           email: string
+          existing_debt?: number | null
           financial_summary?: string | null
+          fundability_rating?: string | null
+          funding_purpose?: string | null
           geography?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
           phone: string
+          readiness_score_100?: number | null
           sharia_status?: Database["public"]["Enums"]["sharia_status"]
           sponsor_name: string
           sponsor_track_record?: string | null
           stage?: Database["public"]["Enums"]["mandate_stage"]
           updated_at?: string
+          use_of_funds_detail?: string | null
           use_of_proceeds?: string | null
+          years_in_operation?: number | null
         }
         Update: {
           archived_at?: string | null
           asset_class?: string | null
           capital_sought?: string
+          cashflow_strength?: string | null
           company_name?: string
           created_at?: string
           created_by?: string | null
+          deal_memo?: Json | null
           deal_type?: Database["public"]["Enums"]["deal_type"]
+          doc_review?: Json | null
           email?: string
+          existing_debt?: number | null
           financial_summary?: string | null
+          fundability_rating?: string | null
+          funding_purpose?: string | null
           geography?: string | null
           id?: string
           lead_id?: string | null
           notes?: string | null
           phone?: string
+          readiness_score_100?: number | null
           sharia_status?: Database["public"]["Enums"]["sharia_status"]
           sponsor_name?: string
           sponsor_track_record?: string | null
           stage?: Database["public"]["Enums"]["mandate_stage"]
           updated_at?: string
+          use_of_funds_detail?: string | null
           use_of_proceeds?: string | null
+          years_in_operation?: number | null
         }
         Relationships: [
           {
