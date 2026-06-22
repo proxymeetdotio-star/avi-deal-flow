@@ -6,6 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { updateMandate, archiveMandate } from "@/lib/mandates.functions";
 import { analyzeMandateDocument } from "@/lib/mandate-docs.functions";
 import { generateMandatePackage } from "@/lib/mandate-generate.functions";
+import { reviewMandateDocuments, generateDealMemo } from "@/lib/mandate-review.functions";
 import { renderMandatePdf } from "@/lib/render-mandate-pdf";
 import { renderMandateDocx } from "@/lib/render-mandate-docx";
 import { renderMandatePptx } from "@/lib/render-mandate-pptx";
@@ -23,7 +24,7 @@ const SHARIA = ["Required", "Not Required", "Pending"] as const;
 function MandateDetail() {
   const { id } = Route.useParams();
   const qc = useQueryClient();
-  const [tab, setTab] = useState<"overview" | "documents" | "package">("overview");
+  const [tab, setTab] = useState<"overview" | "documents" | "review" | "package">("overview");
 
   const { data: mandate, isLoading } = useQuery({
     queryKey: ["mandate", id],
@@ -58,11 +59,11 @@ function MandateDetail() {
       </div>
 
       <div className="mt-6 flex gap-2 border-b" style={{ borderColor: "var(--color-border)" }}>
-        {(["overview", "documents", "package"] as const).map((t) => (
+        {(["overview", "documents", "review", "package"] as const).map((t) => (
           <button key={t} onClick={() => setTab(t)}
             className="px-4 py-2 text-xs font-bold uppercase tracking-wider border-b-2 -mb-px"
             style={{ borderColor: tab === t ? "var(--color-foreground)" : "transparent", color: tab === t ? "var(--color-foreground)" : "var(--color-muted-foreground)" }}>
-            {t === "package" ? "Generated Package" : t === "documents" ? "Documents" : "Overview"}
+            {t === "package" ? "Generated Package" : t === "documents" ? "Documents" : t === "review" ? "Review & Memo" : "Overview"}
           </button>
         ))}
       </div>
@@ -70,6 +71,7 @@ function MandateDetail() {
       <div className="mt-6">
         {tab === "overview" && <Overview mandate={mandate} onSaved={() => qc.invalidateQueries({ queryKey: ["mandate", id] })} />}
         {tab === "documents" && <Documents mandateId={id} />}
+        {tab === "review" && <ReviewAndMemo mandate={mandate} onSaved={() => qc.invalidateQueries({ queryKey: ["mandate", id] })} />}
         {tab === "package" && <Package mandate={mandate} />}
       </div>
     </div>
